@@ -2,6 +2,7 @@
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
+using System.IO;
 
 namespace Electrical_Store
 {
@@ -13,37 +14,36 @@ namespace Electrical_Store
         private string searchTerm = "";
         private bool _canEdit;
 
+        private int _selectedProductId = -1;
+        private Panel _selectedCard = null;
+
         public ProductForm(bool canEdit = true)
         {
             InitializeComponent();
             _canEdit = canEdit;
 
-            dataGridView1.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dataGridView1.MultiSelect = false;
-            dataGridView1.ReadOnly = true;
-            dataGridView1.AllowUserToAddRows = false;
-            dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            this.txtSearch.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.SuppressKeyPress = true;
+                    btnSearch_Click(s, e);
+                }
+            };
+
+            this.cmbSort.SelectedIndexChanged += new EventHandler(this.cmbSort_SelectedIndexChanged);
+
+            this.btnSearch.Click += new EventHandler(this.btnSearch_Click);
 
             if (!_canEdit)
             {
-                if (button1 != null) button1.Visible = false; // Добавить
-                if (button2 != null) button2.Visible = false; // Изменить
-                dataGridView1.ContextMenuStrip = null;
+                if (button1 != null) button1.Visible = false; 
+                if (button2 != null) button2.Visible = false; 
             }
 
-            try
+            if (Session.CurrentUserRoleId == 1)
             {
-                cmbSort.Items.Clear();
-                cmbSort.Items.AddRange(new object[] {
-                    "Сначала новые",
-                    "Сначала старые",
-                    "Сумма (по убыванию)",
-                    "Сумма (по возрастанию)"
-                });
-                cmbSort.SelectedIndex = 0;
-                cmbSort.SelectedIndexChanged += (s, e) => { currentPage = 1; LoadProducts(); };
+                if (button5 != null) button5.Visible = false; 
             }
-            catch { }
 
             LoadProducts();
         }
@@ -59,44 +59,190 @@ namespace Electrical_Store
         {
             try
             {
+                // 1. Поиск
                 string whereClause = string.IsNullOrEmpty(searchTerm)
-                    ? ""
+                    ? " "
                     : $"WHERE p.name LIKE '%{searchTerm}%' OR p.sku LIKE '%{searchTerm}%'";
 
-                string orderBy = "ORDER BY p.name ASC";
+                // 2. Сортировка (определяем по индексу выбранного пункта в ComboBox)
+                string orderBy = "ORDER BY p.name ASC"; // По умолчанию (по алфавиту)
                 try
                 {
-                    if (cmbSort.SelectedIndex == 1) orderBy = "ORDER BY p.name DESC";
-                    if (cmbSort.SelectedIndex == 2) orderBy = "ORDER BY p.retail_price DESC";
-                    if (cmbSort.SelectedIndex == 3) orderBy = "ORDER BY p.retail_price ASC";
+                    if (cmbSort.SelectedIndex == 1) orderBy = "ORDER BY p.name DESC"; // Сначала старые/Я-А
+                    if (cmbSort.SelectedIndex == 2) orderBy = "ORDER BY p.retail_price DESC"; // Сумма по убыванию
+                    if (cmbSort.SelectedIndex == 3) orderBy = "ORDER BY p.retail_price ASC"; // Сумма по возрастанию
                 }
                 catch { }
 
+                // 3. Подсчет общего количества
                 DataTable dtCount = DbHelper.ExecuteQuery($"SELECT COUNT(*) FROM products p {whereClause}");
                 totalRecords = Convert.ToInt32(dtCount.Rows[0][0]);
 
+                // 4. Загрузка данных
                 int offset = (currentPage - 1) * pageSize;
-                string query = $@"SELECT p.id, p.sku, p.name, c.name as category, p.brand, p.retail_price, p.warranty_months 
+                string query = $@"SELECT p.id, p.sku, p.name, c.name as category, p.brand, p.retail_price, p.warranty_months, p.image_path 
                           FROM products p 
                           LEFT JOIN categories c ON p.category_id = c.id 
-                          {whereClause}
-                          {orderBy}
+                          {whereClause} 
+                          {orderBy} 
                           LIMIT {pageSize} OFFSET {offset}";
 
                 DataTable dt = DbHelper.ExecuteQuery(query);
-                dataGridView1.DataSource = dt;
 
-                if (dataGridView1.Columns["id"] != null) dataGridView1.Columns["id"].Visible = false;
-                if (dataGridView1.Columns["sku"] != null) dataGridView1.Columns["sku"].HeaderText = "Артикул";
-                if (dataGridView1.Columns["name"] != null) dataGridView1.Columns["name"].HeaderText = "Наименование";
-                if (dataGridView1.Columns["category"] != null) dataGridView1.Columns["category"].HeaderText = "Категория";
-                if (dataGridView1.Columns["brand"] != null) dataGridView1.Columns["brand"].HeaderText = "Бренд";
-                if (dataGridView1.Columns["retail_price"] != null) dataGridView1.Columns["retail_price"].HeaderText = "Цена";
-                if (dataGridView1.Columns["warranty_months"] != null) dataGridView1.Columns["warranty_months"].HeaderText = "Гарантия";
+                // 5. Отрисовка карточек
+                flowLayoutPanel1.Controls.Clear();
+                foreach (DataRow row in dt.Rows)
+                {
+                    CreateProductCard(
+                        Convert.ToInt32(row["id"]),
+                        row["sku"].ToString(),
+                        row["name"].ToString(),
+                        row["category"]?.ToString() ?? "Без категории",
+                        row["brand"]?.ToString() ?? "Без бренда",
+                        Convert.ToDecimal(row["retail_price"]),
+                        Convert.ToInt32(row["warranty_months"]),
+                        row["image_path"]?.ToString() ?? ""
+                    );
+                }
 
-                UpdatePageButtons();
+                UpdatePageButtons(); // Обновляем текст "Всего записей" и кнопки пагинации
             }
-            catch (Exception ex) { MessageBox.Show("Ошибка: " + ex.Message); }
+            catch (Exception ex) { MessageBox.Show("Ошибка загрузки: " + ex.Message); }
+        }
+
+        // МЕТОД СОЗДАНИЯ ОДНОЙ КАРТОЧКИ
+        private void CreateProductCard(int id, string sku, string name, string category, string brand, decimal price, int warranty, string imageName)
+        {
+            // 1. Создаем панель-карточку
+            Panel card = new Panel();
+            card.Size = new Size(220, 350); // Размер одной карточки
+            card.BackColor = Color.White;
+            card.BorderStyle = BorderStyle.FixedSingle;
+            card.Margin = new Padding(10); // Отступы между карточками
+            card.Cursor = Cursors.Hand;
+            card.Tag = id;
+
+            PictureBox pic = new PictureBox();
+            pic.Size = new Size(200, 150);
+            pic.Location = new Point(10, 10);
+            pic.SizeMode = PictureBoxSizeMode.Zoom;
+
+            try
+            {
+                // Формируем имя ресурса (например, "GEN-5KW-01")
+                // Если в БД сохранено с расширением (.jpg), обрезаем его
+                string resName = System.IO.Path.GetFileNameWithoutExtension(sku);
+
+                // Ищем ресурс по имени через рефлексию
+                object imgObj = Properties.Resources.ResourceManager.GetObject(resName);
+
+                if (imgObj != null)
+                {
+                    pic.Image = (Image)imgObj;
+                }
+                else
+                {
+                    pic.Image = Properties.Resources.path;
+                }
+            }
+            catch
+            {
+                pic.Image = Properties.Resources.path;
+            }
+            card.Controls.Add(pic);
+
+            // 3. Цена (Красная, как на Ozon)
+            Label lblPrice = new Label();
+            lblPrice.Text = $"{price:N0} ₽";
+            lblPrice.Font = new Font("Verdana", 14F, FontStyle.Bold);
+            lblPrice.ForeColor = Color.Red;
+            lblPrice.Location = new Point(10, 170);
+            lblPrice.AutoSize = true;
+            card.Controls.Add(lblPrice);
+
+            // 4. Название товара
+            Label lblName = new Label();
+            lblName.Text = name;
+            lblName.Font = new Font("Verdana", 9F, FontStyle.Regular);
+            lblName.Location = new Point(10, 205);
+            lblName.Size = new Size(200, 40);
+            card.Controls.Add(lblName);
+
+            // 5. Бренд и Гарантия
+            Label lblInfo = new Label();
+            lblInfo.Text = $"{brand} | Гарантия: {warranty} мес.";
+            lblInfo.Font = new Font("Verdana", 8F, FontStyle.Regular);
+            lblInfo.ForeColor = Color.Gray;
+            lblInfo.Location = new Point(10, 250);
+            lblInfo.AutoSize = true;
+            card.Controls.Add(lblInfo);
+
+            EventHandler cardClick = (s, e) =>
+            {
+                // Сбрасываем выделение у старой карточки
+                if (_selectedCard != null) _selectedCard.BackColor = Color.White;
+
+                // Выделяем новую
+                _selectedCard = card;
+                _selectedCard.BackColor = Color.LightBlue; // Цвет выделения
+
+                // Запоминаем ID
+                _selectedProductId = id;
+            };
+
+            card.Click += cardClick;
+            pic.Click += cardClick;
+            lblName.Click += cardClick;
+            lblPrice.Click += cardClick;
+            lblInfo.Click += cardClick;
+
+            // 6. Кнопка Удаления (Вместо двойного клика, так удобнее)
+            if (_canEdit || Session.CurrentUserRoleId == 1) // Админ и Товаровед могут удалять
+            {
+                Button btnDelete = new Button();
+                btnDelete.Text = "Удалить";
+                btnDelete.BackColor = Color.Black;
+                btnDelete.ForeColor = Color.White;
+                btnDelete.FlatStyle = FlatStyle.Flat;
+                btnDelete.Location = new Point(10, 280);
+                btnDelete.Size = new Size(200, 80);
+                btnDelete.Click += (s, e) => {
+                    DeleteProduct(id, name); // Вызов метода удаления
+                };
+                card.Controls.Add(btnDelete);
+            }
+
+            // Двойной клик по всей карточке (для открытия редактирования, если есть права)
+            if (_canEdit)
+            {
+                card.DoubleClick += (s, e) => {
+                    if (new InsertForm("Product", id).ShowDialog() == DialogResult.OK) LoadProducts();
+                };
+            }
+
+            // Добавляем карточку на форму
+            flowLayoutPanel1.Controls.Add(card);
+        }
+
+        // МЕТОД УДАЛЕНИЯ (Вынесен отдельно для кнопки)
+        private void DeleteProduct(int id, string productName)
+        {
+            if (MessageBox.Show($"Вы точно хотите удалить товар:\n{productName}?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            {
+                try
+                {
+                    DbHelper.ExecuteNonQuery($"DELETE FROM products WHERE id = {id}");
+                    MessageBox.Show("Товар удален!");
+                    LoadProducts(); // Обновляем карточки
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.Contains("foreign key") || ex.Message.Contains("Cannot delete"))
+                        MessageBox.Show("Невозможно удалить товар! Он присутствует в заказах или на складе.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    else
+                        MessageBox.Show("Ошибка при удалении: " + ex.Message, "Ошибка БД", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
         }
 
         private void UpdatePageButtons()
@@ -125,12 +271,18 @@ namespace Electrical_Store
 
         private void buttonEdit_Click(object sender, EventArgs e)
         {
-            if (dataGridView1.SelectedRows.Count > 0 && dataGridView1.SelectedRows[0].Cells["id"] != null)
+            if (_selectedProductId != -1)
             {
-                int id = Convert.ToInt32(dataGridView1.SelectedRows[0].Cells["id"].Value);
-                if (new InsertForm("Product", id).ShowDialog() == DialogResult.OK) LoadProducts();
+                // Открываем форму редактирования для выбранного ID
+                if (new InsertForm("Product", _selectedProductId).ShowDialog() == DialogResult.OK)
+                {
+                    LoadProducts();
+                }
             }
-            else MessageBox.Show("Выберите товар.");
+            else
+            {
+                MessageBox.Show("Пожалуйста, кликните левой кнопкой мыши по карточке товара, который хотите изменить.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         private void buttonExit_Click(object sender, EventArgs e)
@@ -165,43 +317,11 @@ namespace Electrical_Store
                 bukket.Show();
             }
         }
-        private void dataGridView1_CellContentDoubleClick(object sender, DataGridViewCellEventArgs e)
+
+        private void cmbSort_SelectedIndexChanged(object sender, EventArgs e)
         {
-            // Если у пользователя нет прав на редактирование (продавец), блокируем удаление
-            if (!_canEdit) return;
-
-            // Проверяем, что кликнули по строке с данными, а не по заголовку
-            if (e.RowIndex >= 0)
-            {
-                // Проверка на существование ячейки (защита от NullReference)
-                if (dataGridView1.Rows[e.RowIndex].Cells["id"].Value == null) return;
-
-                int id = Convert.ToInt32(dataGridView1.Rows[e.RowIndex].Cells["id"].Value);
-                string productName = dataGridView1.Rows[e.RowIndex].Cells["name"].Value.ToString();
-
-                if (MessageBox.Show($"Вы точно хотите удалить товар:\n{productName}?", "Подтверждение удаления", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
-                {
-                    try
-                    {
-                        DbHelper.ExecuteNonQuery($"DELETE FROM products WHERE id = {id}");
-                        MessageBox.Show("Товар удален!");
-                        LoadProducts(); // Обновляем таблицу
-                    }
-                    catch (Exception ex)
-                    {
-                        // Проверяем на ошибку внешнего ключа (когда товар уже в заказе или на складе)
-                        if (ex.Message.Contains("foreign key") || ex.Message.Contains("Cannot delete"))
-                        {
-                            MessageBox.Show("Невозможно удалить товар!\n\nЭтот товар уже присутствует в оформленных заказах или на складе. Сначала удалите связанные записи.",
-                                            "Запрещено", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                        }
-                        else
-                        {
-                            MessageBox.Show("Ошибка при удалении: " + ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    }
-                }
-            }
+            currentPage = 1;
+            LoadProducts();
         }
     }
 

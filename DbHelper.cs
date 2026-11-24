@@ -11,7 +11,7 @@ namespace Electrical_Store
     internal class DbHelper
     {
         // Укажите ваши данные для подключения
-        private static readonly string connectionString = "server=localhost;user=root;database=electrical store;password=root;";
+        private static readonly string connectionString = "server=localhost;user=root;database=electrical store;password=root123;";
 
         public static MySqlConnection GetConnection()
         {

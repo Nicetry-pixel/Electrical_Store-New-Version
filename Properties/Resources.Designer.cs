@@ -83,9 +83,29 @@ namespace Electrical_Store.Properties {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap GEN_5KW_01 {
+            get {
+                object obj = ResourceManager.GetObject("GEN-5KW-01", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap magazin_elektriki_bez_belogo_fona {
             get {
                 object obj = ResourceManager.GetObject("magazin_elektriki_bez_belogo_fona", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap path {
+            get {
+                object obj = ResourceManager.GetObject("path", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

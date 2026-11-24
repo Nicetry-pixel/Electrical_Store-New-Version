@@ -60,6 +60,8 @@
             this.panelStock.SuspendLayout();
             this.panelOrder.SuspendLayout();
             this.SuspendLayout();
+            this.cmbProductImage = new System.Windows.Forms.ComboBox();
+            this.lblProdImage = new System.Windows.Forms.Label();
             // 
             // panelUser
             // 
@@ -194,6 +196,21 @@
             this.panelProduct.Name = "panelProduct";
             this.panelProduct.Size = new System.Drawing.Size(400, 250);
             this.panelProduct.TabIndex = 4;
+            // --- Добавьте это в блок panelProduct ---
+            this.panelProduct.Controls.Add(this.cmbProductImage);
+            this.panelProduct.Controls.Add(this.lblProdImage);
+
+            // Настройка ComboBox
+            this.cmbProductImage.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbProductImage.Location = new System.Drawing.Point(120, 260); // Сдвиньте ниже остальных полей, если нужно
+            this.cmbProductImage.Name = "cmbProductImage";
+            this.cmbProductImage.Size = new System.Drawing.Size(200, 21);
+
+            // Настройка Label
+            this.lblProdImage.Location = new System.Drawing.Point(20, 260);
+            this.lblProdImage.Name = "lblProdImage";
+            this.lblProdImage.Size = new System.Drawing.Size(100, 23);
+            this.lblProdImage.Text = "Картинка:";
             // 
             // txtProdRetail
             // 
@@ -511,5 +528,7 @@
         private System.Windows.Forms.ComboBox cmbOrdStatus;
         private System.Windows.Forms.Button btnSave, btnExit;
         private System.Windows.Forms.MaskedTextBox maskedTextBox1;
+        private System.Windows.Forms.ComboBox cmbProductImage;
+        private System.Windows.Forms.Label lblProdImage;
     }
 }

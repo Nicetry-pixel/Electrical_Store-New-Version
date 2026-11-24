@@ -33,9 +33,9 @@ namespace Electrical_Store
 
         private void button3_Click(object sender, EventArgs e)
         {
-            ProductForm product = new ProductForm();
+            ProductForm product = new ProductForm(false);
             product.Show();
-            this.Close();
+            this.Hide();
         }
 
         private void button4_Click(object sender, EventArgs e)

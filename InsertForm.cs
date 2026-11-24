@@ -34,7 +34,17 @@ namespace Electrical_Store
                 this.Text = "Редактирование товара";
                 DataTable dtCat = DbHelper.ExecuteQuery("SELECT id, name FROM categories");
                 cmbProdCategory.DataSource = dtCat; cmbProdCategory.DisplayMember = "name"; cmbProdCategory.ValueMember = "id";
+                decimal.TryParse(txtProdPrice.Text, out decimal pPrice);
+                decimal.TryParse(txtProdRetail.Text, out decimal rPrice);
+
+                // Получаем имя выбранной картинки
+                string imageName = cmbProductImage.SelectedItem != null ? cmbProductImage.SelectedItem.ToString() : "";
+
+                string query = $@"INSERT INTO products (sku, name, category_id, brand, purchase_price, retail_price, image_path) 
+                      VALUES ('{txtProdSKU.Text}', '{txtProdName.Text}', {cmbProdCategory.SelectedValue}, '{txtProdBrand.Text}', {pPrice}, {rPrice}, '{imageName}')";
+                DbHelper.ExecuteNonQuery(query);
                 LoadProductData();
+                LoadImagesToCombo();
             }
             else if (_entityType == "Stock")
             {
@@ -51,6 +61,19 @@ namespace Electrical_Store
                 cmbOrdStatus.Items.Clear(); cmbOrdStatus.Items.AddRange(new object[] { "new", "processing", "shipped", "delivered", "cancelled" });
                 LoadOrderData();
             }
+        }
+
+        private void LoadImagesToCombo()
+        {
+            cmbProductImage.Items.Clear();
+            // Ищем все .jpg и .png в текущей папке (где лежит .exe)
+            string[] files = System.IO.Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.jpg");
+            string[] filesPng = System.IO.Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.png");
+
+            foreach (string file in files) cmbProductImage.Items.Add(System.IO.Path.GetFileName(file));
+            foreach (string file in filesPng) cmbProductImage.Items.Add(System.IO.Path.GetFileName(file));
+
+            if (cmbProductImage.Items.Count > 0) cmbProductImage.SelectedIndex = 0;
         }
 
         private void LoadUserData()
