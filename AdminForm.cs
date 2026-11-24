@@ -40,7 +40,7 @@ namespace Electrical_Store
 
         private void button4_Click(object sender, EventArgs e)
         {
-            OrderForm order = new OrderForm();
+            OrderMechendaizerForm order = new OrderMechendaizerForm();
             order.Show();
             this.Close();
         }

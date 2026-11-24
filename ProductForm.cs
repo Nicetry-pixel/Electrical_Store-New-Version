@@ -39,10 +39,21 @@ namespace Electrical_Store
                 if (button1 != null) button1.Visible = false; 
                 if (button2 != null) button2.Visible = false; 
             }
+            else 
+            {
+
+                if (button1 != null) button1.Visible = true;
+                if (button2 != null) button2.Visible = true;
+            }
 
             if (Session.CurrentUserRoleId == 1)
             {
-                if (button5 != null) button5.Visible = false; 
+                if (button5 != null) button5.Visible = true; 
+            }
+
+            if (Session.CurrentUserRoleId == 4)
+            {
+                if (button5 != null) button5.Visible = true;
             }
 
             LoadProducts();

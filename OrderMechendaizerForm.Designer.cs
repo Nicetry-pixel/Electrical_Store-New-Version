@@ -41,6 +41,7 @@ namespace Electrical_Store
             this.button4 = new System.Windows.Forms.Button();
             this.cmbSort = new System.Windows.Forms.ComboBox();
             this.label2 = new System.Windows.Forms.Label();
+            this.lblCount = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -49,9 +50,9 @@ namespace Electrical_Store
             this.button3.BackColor = System.Drawing.Color.Black;
             this.button3.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
             this.button3.ForeColor = System.Drawing.Color.WhiteSmoke;
-            this.button3.Location = new System.Drawing.Point(382, 647);
+            this.button3.Location = new System.Drawing.Point(382, 681);
             this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(157, 81);
+            this.button3.Size = new System.Drawing.Size(157, 47);
             this.button3.TabIndex = 12;
             this.button3.Text = "Выход ";
             this.button3.UseVisualStyleBackColor = false;
@@ -63,7 +64,7 @@ namespace Electrical_Store
             this.dataGridView1.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
             this.dataGridView1.BackgroundColor = System.Drawing.Color.WhiteSmoke;
             this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView1.Location = new System.Drawing.Point(12, 167);
+            this.dataGridView1.Location = new System.Drawing.Point(12, 155);
             this.dataGridView1.MultiSelect = false;
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.ReadOnly = true;
@@ -88,7 +89,7 @@ namespace Electrical_Store
             this.label1.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.label1.Location = new System.Drawing.Point(12, 9);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(104, 32);
+            this.label1.Size = new System.Drawing.Size(103, 32);
             this.label1.TabIndex = 15;
             this.label1.Text = "Заказ";
             // 
@@ -110,9 +111,9 @@ namespace Electrical_Store
             this.button6.BackColor = System.Drawing.Color.Black;
             this.button6.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
             this.button6.ForeColor = System.Drawing.Color.WhiteSmoke;
-            this.button6.Location = new System.Drawing.Point(12, 647);
+            this.button6.Location = new System.Drawing.Point(12, 681);
             this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(95, 81);
+            this.button6.Size = new System.Drawing.Size(95, 47);
             this.button6.TabIndex = 18;
             this.button6.Text = "<";
             this.button6.UseVisualStyleBackColor = false;
@@ -123,9 +124,9 @@ namespace Electrical_Store
             this.button4.BackColor = System.Drawing.Color.Black;
             this.button4.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
             this.button4.ForeColor = System.Drawing.Color.WhiteSmoke;
-            this.button4.Location = new System.Drawing.Point(167, 647);
+            this.button4.Location = new System.Drawing.Point(160, 681);
             this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(95, 81);
+            this.button4.Size = new System.Drawing.Size(95, 47);
             this.button4.TabIndex = 17;
             this.button4.Text = ">";
             this.button4.UseVisualStyleBackColor = false;
@@ -148,9 +149,20 @@ namespace Electrical_Store
             this.label2.ForeColor = System.Drawing.Color.WhiteSmoke;
             this.label2.Location = new System.Drawing.Point(12, 112);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(198, 32);
+            this.label2.Size = new System.Drawing.Size(197, 32);
             this.label2.TabIndex = 20;
             this.label2.Text = "Сортировка";
+            // 
+            // lblCount
+            // 
+            this.lblCount.AutoSize = true;
+            this.lblCount.BackColor = System.Drawing.Color.Black;
+            this.lblCount.Font = new System.Drawing.Font("Verdana", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.lblCount.ForeColor = System.Drawing.Color.White;
+            this.lblCount.Location = new System.Drawing.Point(18, 646);
+            this.lblCount.Name = "lblCount";
+            this.lblCount.Size = new System.Drawing.Size(0, 25);
+            this.lblCount.TabIndex = 21;
             // 
             // OrderMechendaizerForm
             // 
@@ -158,6 +170,7 @@ namespace Electrical_Store
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(64)))), ((int)(((byte)(64)))));
             this.ClientSize = new System.Drawing.Size(846, 740);
+            this.Controls.Add(this.lblCount);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.cmbSort);
             this.Controls.Add(this.button6);
@@ -190,5 +203,6 @@ namespace Electrical_Store
         private Button button4;
         private ComboBox cmbSort;
         private Label label2;
+        private Label lblCount;
     }
 }

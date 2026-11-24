@@ -33,14 +33,6 @@ namespace Electrical_Store
             this.Hide();
         }
 
-        // 3. Переход на форму Склада
-        private void button5_Click(object sender, EventArgs e)
-        {
-            StockForm stockForm = new StockForm();
-            stockForm.Show();
-            this.Hide();
-        }
-
         // 4. Выход из аккаунта (возврат на форму входа)
         private void button1_Click(object sender, EventArgs e)
         {

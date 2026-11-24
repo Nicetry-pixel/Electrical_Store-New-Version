@@ -31,9 +31,7 @@ namespace Electrical_Store
                 cmbSort.Items.Clear();
                 cmbSort.Items.AddRange(new object[] {
                     "Сначала новые",
-                    "Сначала старые",
-                    "Сумма (по убыванию)",
-                    "Сумма (по возрастанию)"
+                    "Сначала старые"
                 });
                 cmbSort.SelectedIndex = 0;
                 cmbSort.SelectedIndexChanged += (s, e) => { currentPage = 1; LoadOrders(); };
@@ -59,7 +57,14 @@ namespace Electrical_Store
                 };
             }
 
+            this.dataGridView1.DataBindingComplete += new DataGridViewBindingCompleteEventHandler(this.DataGridView1_DataBindingComplete);
+
             LoadOrders();
+        }
+
+        private void DataGridView1_DataBindingComplete(object sender, DataGridViewBindingCompleteEventArgs e)
+        {
+            ApplyRowColors();
         }
 
         // НОВЫЙ МЕТОД: Подгрузка номеров заказов для автодополнения
@@ -102,36 +107,32 @@ namespace Electrical_Store
         {
             try
             {
-                // 1. Поиск (по номеру заказа или клиенту)
                 string whereClause = string.IsNullOrEmpty(searchTerm)
                     ? ""
                     : $"WHERE o.order_number LIKE '%{searchTerm}%' OR o.customer_name LIKE '%{searchTerm}%'";
 
-                // 2. Сортировка
-                string orderBy = "ORDER BY o.created_at DESC"; // По умолчанию (сначала новые)
+                string orderBy = "ORDER BY o.created_at DESC";
                 try
                 {
-                    switch (cmbSort.SelectedIndex)
-                    {
-                        case 1: orderBy = "ORDER BY o.created_at ASC"; break;
-                        case 2: orderBy = "ORDER BY o.total_amount DESC"; break;
-                        case 3: orderBy = "ORDER BY o.total_amount ASC"; break;
-                    }
+                    if (cmbSort.SelectedIndex == 1) orderBy = "ORDER BY o.created_at ASC";
+                    if (cmbSort.SelectedIndex == 2) orderBy = "ORDER BY o.total_amount DESC";
+                    if (cmbSort.SelectedIndex == 3) orderBy = "ORDER BY o.total_amount ASC";
                 }
                 catch { }
 
-                // 3. Подсчет записей
                 DataTable dtCount = DbHelper.ExecuteQuery($"SELECT COUNT(*) FROM orders o {whereClause}");
                 totalRecords = Convert.ToInt32(dtCount.Rows[0][0]);
 
-                // 4. Загрузка данных
+                // ВЫВОД КОЛИЧЕСТВА ЗАПИСЕЙ (если вы добавили Label с именем lblCount)
+                try { lblCount.Text = $"Всего записей: {totalRecords}"; } catch { }
+
                 int offset = (currentPage - 1) * pageSize;
                 string query = $@"SELECT o.id, o.order_number, o.customer_name, o.status, 
-                                         o.total_amount, o.created_at
-                                  FROM orders o 
-                                  {whereClause}
-                                  {orderBy}
-                                  LIMIT {pageSize} OFFSET {offset}";
+                                 o.total_amount, o.created_at
+                          FROM orders o 
+                          {whereClause}
+                          {orderBy}
+                          LIMIT {pageSize} OFFSET {offset}";
 
                 DataTable dt = DbHelper.ExecuteQuery(query);
 
@@ -146,9 +147,12 @@ namespace Electrical_Store
                     if (dataGridView1.Columns["total_amount"] != null) dataGridView1.Columns["total_amount"].HeaderText = "Сумма";
                     if (dataGridView1.Columns["created_at"] != null) dataGridView1.Columns["created_at"].HeaderText = "Дата оформления";
 
-                    // Маскировка ФИО клиента
+                    // Маскировка ФИО
                     dataGridView1.CellFormatting -= DataGridView1_CellFormatting;
                     dataGridView1.CellFormatting += DataGridView1_CellFormatting;
+
+                    // --- УСЛОВНОЕ ФОРМАТИРОВАНИЕ (ЦВЕТА) ---
+                   // ApplyRowColors();
                 }
 
                 UpdatePageButtons();
@@ -156,11 +160,35 @@ namespace Electrical_Store
             catch (Exception ex) { MessageBox.Show("Ошибка загрузки: " + ex.Message); }
         }
 
-        private void DataGridView1_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        // НОВЫЙ МЕТОД ДЛЯ ОКРАШИВАНИЯ СТРОК
+        private void ApplyRowColors()
         {
-            if (e.ColumnIndex < 0 || e.Value == null || dataGridView1.Columns.Count == 0) return;
-            if (dataGridView1.Columns["customer_name"] != null && e.ColumnIndex == dataGridView1.Columns["customer_name"].Index)
-                e.Value = Utils.MaskName(e.Value.ToString());
+            foreach (DataGridViewRow row in dataGridView1.Rows)
+            {
+                if (row.Cells["status"].Value == null) continue;
+
+                string status = row.Cells["status"].Value.ToString();
+
+                switch (status)
+                {
+                    case "new":
+                    case "processing":
+                        row.DefaultCellStyle.BackColor = Color.LightGreen; // Зелёный (Активный)
+                        break;
+                    case "shipped":
+                        row.DefaultCellStyle.BackColor = Color.Khaki;      // Жёлтый (Задерживается)
+                        break;
+                    case "cancelled":
+                        row.DefaultCellStyle.BackColor = Color.LightCoral; // Красный (Отменён)
+                        break;
+                    case "delivered":
+                        row.DefaultCellStyle.BackColor = Color.White;      // Белый (Завершён)
+                        break;
+                    default:
+                        row.DefaultCellStyle.BackColor = Color.White;
+                        break;
+                }
+            }
         }
 
         private void UpdatePageButtons()
@@ -168,15 +196,21 @@ namespace Electrical_Store
             int totalPages = (int)Math.Ceiling((double)totalRecords / pageSize);
             if (totalPages == 0) totalPages = 1;
 
-            // Если у вас есть Label для вывода страниц (например label2), раскомментируйте:
-            // label2.Text = $"{currentPage} / {totalPages}";
-
             try
             {
-                button4.Enabled = currentPage > 1;           // Кнопка "<"
-                button6.Enabled = currentPage < totalPages;  // Кнопка ">"
+                // Проверьте имена кнопок пагинации в вашем дизайнере!
+                // В OrderMechendaizerForm они называются button6 (<) и button4 (>)
+                button6.Enabled = currentPage > 1;
+                button4.Enabled = currentPage < totalPages;
             }
             catch { }
+        }
+
+        private void DataGridView1_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.ColumnIndex < 0 || e.Value == null || dataGridView1.Columns.Count == 0) return;
+            if (dataGridView1.Columns["customer_name"] != null && e.ColumnIndex == dataGridView1.Columns["customer_name"].Index)
+                e.Value = Utils.MaskName(e.Value.ToString());
         }
 
         // Кнопка "Назад" (<)
@@ -195,8 +229,9 @@ namespace Electrical_Store
         // Кнопка "Выход"
         private void button3_Click(object sender, EventArgs e)
         {
-            MechendaizerForm merch = new MechendaizerForm();
-            merch.Show();
+            if (Session.CurrentUserRoleId == 1) { new AdminForm().Show(); }
+            else if (Session.CurrentUserRoleId == 2) { new MechendaizerForm().Show(); }
+            else { new BuyerForm().Show(); }
             this.Close();
         }
     }
